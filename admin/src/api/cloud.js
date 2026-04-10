@@ -1,43 +1,45 @@
+import cloudbase from '@cloudbase/js-sdk'
 import { getMockData } from '../utils/mockData'
 
-const BASE_URL = import.meta.env.VITE_CLOUD_BASE_URL || ''
+// 初始化 CloudBase
+let app = null
+
+function getApp() {
+  if (!app) {
+    app = cloudbase.init({
+      env: 'cloud1-3g56hllb4a005c0e'
+    })
+  }
+  return app
+}
 
 /**
  * 调用云函数
- * 生产环境通过 HTTP 触发器调用
- * 开发环境使用 Mock 数据
+ * 使用 CloudBase JS SDK 直接调用（未登录模式）
+ * 调用失败时降级到 Mock 数据
  */
 export const callFunction = async (name, data = {}) => {
-  // 1. 如果有 BASE_URL，通过 HTTP 调用云函数
-  if (BASE_URL) {
-    try {
-      const token = localStorage.getItem('adminToken') || ''
-      const response = await fetch(`${BASE_URL}/${name}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(data)
-      })
+  try {
+    const cbApp = getApp()
+    const result = await cbApp.callFunction({
+      name,
+      data
+    })
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
+    if (result && result.result) {
+      const res = result.result
+      // 检查业务错误
+      if (res.code !== undefined && res.code !== 0) {
+        throw new Error(res.message || '业务错误')
       }
-
-      const result = await response.json()
-      if (result.code !== 0) {
-        throw new Error(result.message || '请求失败')
-      }
-      return result
-    } catch (err) {
-      console.warn(`云函数 ${name} HTTP调用失败，降级到Mock:`, err.message)
-      // 降级到 Mock
+      return res
     }
+    return result
+  } catch (err) {
+    console.warn(`云函数 ${name} 调用失败，降级到Mock:`, err.message || err)
+    // 降级到 Mock 数据
+    const mockResult = getMockData(name, data)
+    if (mockResult) return mockResult
+    throw new Error(`无法处理请求: ${name}`)
   }
-
-  // 2. Mock 降级
-  const mockResult = getMockData(name, data)
-  if (mockResult) return mockResult
-  throw new Error(`无法处理请求: ${name}`)
 }
