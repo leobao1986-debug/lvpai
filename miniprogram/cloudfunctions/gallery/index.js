@@ -157,7 +157,8 @@ async function listGallery(data) {
 
 // 获取客片详情
 async function getGalleryDetail(data) {
-  const { id } = data
+  // 支持 id 和 _id 两种参数名
+  const id = data.id || data._id
   
   if (!id) {
     return { code: -1, message: '客片ID不能为空' }
@@ -215,8 +216,12 @@ async function updateGallery(data, openid) {
   if (!isAdmin) {
     return { code: -1, message: '无权限操作' }
   }
-  
-  const { id, ...updateData } = data
+
+  // 支持 id 和 _id 两种参数名
+  const id = data.id || data._id
+  const updateData = { ...data }
+  delete updateData.id
+  delete updateData._id
   
   if (!id) {
     return { code: -1, message: '客片ID不能为空' }
@@ -245,8 +250,9 @@ async function deleteGallery(data, openid) {
   if (!isAdmin) {
     return { code: -1, message: '无权限操作' }
   }
-  
-  const { id } = data
+
+  // 支持 id 和 _id 两种参数名
+  const id = data.id || data._id
   
   if (!id) {
     return { code: -1, message: '客片ID不能为空' }

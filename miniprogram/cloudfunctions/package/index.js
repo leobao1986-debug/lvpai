@@ -77,6 +77,7 @@ async function handleRequest(event, context) {
         return await deletePackage(data, openid)
       
       case 'updateStatus':
+      case 'toggleStatus':
         return await updatePackageStatus(data, openid)
       
       default:
@@ -140,7 +141,8 @@ async function listPackages(data) {
 
 // 获取套餐详情
 async function getPackageDetail(data) {
-  const { id } = data
+  // 支持 id 和 _id 两种参数名
+  const id = data.id || data._id
   
   if (!id) {
     return { code: -1, message: '套餐ID不能为空' }
@@ -227,8 +229,9 @@ async function deletePackage(data, openid) {
   if (!isAdmin) {
     return { code: -1, message: '无权限操作' }
   }
-  
-  const { id } = data
+
+  // 支持 id 和 _id 两种参数名
+  const id = data.id || data._id
   
   if (!id) {
     return { code: -1, message: '套餐ID不能为空' }
@@ -250,8 +253,10 @@ async function updatePackageStatus(data, openid) {
   if (!isAdmin) {
     return { code: -1, message: '无权限操作' }
   }
-  
-  const { id, status } = data
+
+  // 支持 id 和 _id 两种参数名
+  const id = data.id || data._id
+  const { status } = data
   
   if (!id) {
     return { code: -1, message: '套餐ID不能为空' }
