@@ -6,7 +6,7 @@ const _ = db.command
 
 // 云存储环境配置
 const CLOUD_ENV = 'cloud1-3g56hllb4a005c0e'
-const CLOUD_STORAGE_PREFIX = '636c-cloud1-3g56hllb4a005c0e-1330614701'
+const CLOUD_STORAGE_PREFIX = '636c-cloud1-3g56hllb4a005c0e-1419657853'
 
 // 转换图片路径为临时URL（异步）
 async function convertImageUrls(items) {
