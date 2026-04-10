@@ -204,7 +204,11 @@ async function updatePackage(data, openid, isHttpCall = false) {
     }
   }
   
-  const { id, ...updateData } = data
+  // 支持 id 和 _id 两种参数名
+  const id = data.id || data._id
+  const updateData = { ...data }
+  delete updateData.id
+  delete updateData._id
   
   if (!id) {
     return { code: -1, message: '套餐ID不能为空' }
