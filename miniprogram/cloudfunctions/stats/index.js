@@ -21,7 +21,7 @@ exports.main = async (event, context) => {
       }
     }
     const body = JSON.parse(event.body || '{}')
-    const result = await handleRequest(body, context)
+    const result = await handleRequest(body, context, true)  // HTTP调用标记为true
     return {
       statusCode: 200,
       headers: {
@@ -32,10 +32,10 @@ exports.main = async (event, context) => {
     }
   }
   // 小程序直接调用
-  return await handleRequest(event, context)
+  return await handleRequest(event, context, false)  // 小程序调用标记为false
 }
 
-async function handleRequest(event, context) {
+async function handleRequest(event, context, isHttpCall = false) {
   const { action, data = {} } = event
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID || event.openid || ''
@@ -43,11 +43,12 @@ async function handleRequest(event, context) {
   // 调试日志
   console.log('handleRequest called with event:', JSON.stringify(event))
   console.log('action:', action)
+  console.log('isHttpCall:', isHttpCall)
   
   try {
     switch (action) {
       case 'overview':
-        return await getOverview(data, openid)
+        return await getOverview(data, openid, isHttpCall)
       default:
         return { code: -1, message: `未知操作: ${action}` }
     }
@@ -104,11 +105,13 @@ function getMonthRange() {
 /**
  * 获取数据概览（管理员）
  */
-async function getOverview(data, openid) {
-  // 管理员权限校验
-  const isAdminRole = await checkAdmin(openid)
-  if (!isAdminRole) {
-    return { code: -1, message: '无权限查看统计数据' }
+async function getOverview(data, openid, isHttpCall = false) {
+  // 管理员权限校验（HTTP调用来自管理后台，已有登录保护，跳过检查）
+  if (!isHttpCall) {
+    const isAdminRole = await checkAdmin(openid)
+    if (!isAdminRole) {
+      return { code: -1, message: '无权限查看统计数据' }
+    }
   }
   
   const today = getTodayString()

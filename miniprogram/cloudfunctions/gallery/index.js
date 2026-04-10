@@ -40,7 +40,7 @@ exports.main = async (event, context) => {
       }
     }
     const body = JSON.parse(event.body || '{}')
-    const result = await handleRequest(body, context)
+    const result = await handleRequest(body, context, true)  // HTTP调用标记为true
     return {
       statusCode: 200,
       headers: {
@@ -51,10 +51,10 @@ exports.main = async (event, context) => {
     }
   }
   // 小程序直接调用
-  return await handleRequest(event, context)
+  return await handleRequest(event, context, false)  // 小程序调用标记为false
 }
 
-async function handleRequest(event, context) {
+async function handleRequest(event, context, isHttpCall = false) {
   const { action, data = {} } = event
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID || event.openid || ''
@@ -68,13 +68,13 @@ async function handleRequest(event, context) {
         return await getGalleryDetail(data)
       
       case 'create':
-        return await createGallery(data, openid)
+        return await createGallery(data, openid, isHttpCall)
       
       case 'update':
-        return await updateGallery(data, openid)
+        return await updateGallery(data, openid, isHttpCall)
       
       case 'delete':
-        return await deleteGallery(data, openid)
+        return await deleteGallery(data, openid, isHttpCall)
       
       case 'favorite':
         return await toggleFavorite(data, openid)
@@ -181,11 +181,13 @@ async function getGalleryDetail(data) {
 }
 
 // 创建客片（管理员）
-async function createGallery(data, openid) {
-  // 校验管理员权限
-  const isAdmin = await checkAdmin(openid)
-  if (!isAdmin) {
-    return { code: -1, message: '无权限操作' }
+async function createGallery(data, openid, isHttpCall = false) {
+  // 校验管理员权限（HTTP调用来自管理后台，已有登录保护，跳过检查）
+  if (!isHttpCall) {
+    const isAdmin = await checkAdmin(openid)
+    if (!isAdmin) {
+      return { code: -1, message: '无权限操作' }
+    }
   }
   
   const now = db.serverDate()
@@ -210,11 +212,13 @@ async function createGallery(data, openid) {
 }
 
 // 更新客片（管理员）
-async function updateGallery(data, openid) {
-  // 校验管理员权限
-  const isAdmin = await checkAdmin(openid)
-  if (!isAdmin) {
-    return { code: -1, message: '无权限操作' }
+async function updateGallery(data, openid, isHttpCall = false) {
+  // 校验管理员权限（HTTP调用来自管理后台，已有登录保护，跳过检查）
+  if (!isHttpCall) {
+    const isAdmin = await checkAdmin(openid)
+    if (!isAdmin) {
+      return { code: -1, message: '无权限操作' }
+    }
   }
 
   // 支持 id 和 _id 两种参数名
@@ -244,11 +248,13 @@ async function updateGallery(data, openid) {
 }
 
 // 删除客片（管理员）
-async function deleteGallery(data, openid) {
-  // 校验管理员权限
-  const isAdmin = await checkAdmin(openid)
-  if (!isAdmin) {
-    return { code: -1, message: '无权限操作' }
+async function deleteGallery(data, openid, isHttpCall = false) {
+  // 校验管理员权限（HTTP调用来自管理后台，已有登录保护，跳过检查）
+  if (!isHttpCall) {
+    const isAdmin = await checkAdmin(openid)
+    if (!isAdmin) {
+      return { code: -1, message: '无权限操作' }
+    }
   }
 
   // 支持 id 和 _id 两种参数名

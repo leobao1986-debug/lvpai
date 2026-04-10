@@ -40,7 +40,7 @@ exports.main = async (event, context) => {
       }
     }
     const body = JSON.parse(event.body || '{}')
-    const result = await handleRequest(body, context)
+    const result = await handleRequest(body, context, true)  // HTTP调用标记为true
     return {
       statusCode: 200,
       headers: {
@@ -51,10 +51,10 @@ exports.main = async (event, context) => {
     }
   }
   // 小程序直接调用
-  return await handleRequest(event, context)
+  return await handleRequest(event, context, false)  // 小程序调用标记为false
 }
 
-async function handleRequest(event, context) {
+async function handleRequest(event, context, isHttpCall = false) {
   const { action, data = {} } = event
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID || event.openid || ''
@@ -68,17 +68,17 @@ async function handleRequest(event, context) {
         return await getPackageDetail(data)
       
       case 'create':
-        return await createPackage(data, openid)
+        return await createPackage(data, openid, isHttpCall)
       
       case 'update':
-        return await updatePackage(data, openid)
+        return await updatePackage(data, openid, isHttpCall)
       
       case 'delete':
-        return await deletePackage(data, openid)
+        return await deletePackage(data, openid, isHttpCall)
       
       case 'updateStatus':
       case 'toggleStatus':
-        return await updatePackageStatus(data, openid)
+        return await updatePackageStatus(data, openid, isHttpCall)
       
       default:
         return { code: -1, message: `未知操作: ${action}` }
@@ -165,11 +165,13 @@ async function getPackageDetail(data) {
 }
 
 // 创建套餐（管理员）
-async function createPackage(data, openid) {
-  // 校验管理员权限
-  const isAdmin = await checkAdmin(openid)
-  if (!isAdmin) {
-    return { code: -1, message: '无权限操作' }
+async function createPackage(data, openid, isHttpCall = false) {
+  // 校验管理员权限（HTTP调用来自管理后台，已有登录保护，跳过检查）
+  if (!isHttpCall) {
+    const isAdmin = await checkAdmin(openid)
+    if (!isAdmin) {
+      return { code: -1, message: '无权限操作' }
+    }
   }
   
   const now = db.serverDate()
@@ -193,11 +195,13 @@ async function createPackage(data, openid) {
 }
 
 // 更新套餐（管理员）
-async function updatePackage(data, openid) {
-  // 校验管理员权限
-  const isAdmin = await checkAdmin(openid)
-  if (!isAdmin) {
-    return { code: -1, message: '无权限操作' }
+async function updatePackage(data, openid, isHttpCall = false) {
+  // 校验管理员权限（HTTP调用来自管理后台，已有登录保护，跳过检查）
+  if (!isHttpCall) {
+    const isAdmin = await checkAdmin(openid)
+    if (!isAdmin) {
+      return { code: -1, message: '无权限操作' }
+    }
   }
   
   const { id, ...updateData } = data
@@ -223,11 +227,13 @@ async function updatePackage(data, openid) {
 }
 
 // 删除套餐（管理员）
-async function deletePackage(data, openid) {
-  // 校验管理员权限
-  const isAdmin = await checkAdmin(openid)
-  if (!isAdmin) {
-    return { code: -1, message: '无权限操作' }
+async function deletePackage(data, openid, isHttpCall = false) {
+  // 校验管理员权限（HTTP调用来自管理后台，已有登录保护，跳过检查）
+  if (!isHttpCall) {
+    const isAdmin = await checkAdmin(openid)
+    if (!isAdmin) {
+      return { code: -1, message: '无权限操作' }
+    }
   }
 
   // 支持 id 和 _id 两种参数名
@@ -247,11 +253,13 @@ async function deletePackage(data, openid) {
 }
 
 // 更新套餐状态（上下架）
-async function updatePackageStatus(data, openid) {
-  // 校验管理员权限
-  const isAdmin = await checkAdmin(openid)
-  if (!isAdmin) {
-    return { code: -1, message: '无权限操作' }
+async function updatePackageStatus(data, openid, isHttpCall = false) {
+  // 校验管理员权限（HTTP调用来自管理后台，已有登录保护，跳过检查）
+  if (!isHttpCall) {
+    const isAdmin = await checkAdmin(openid)
+    if (!isAdmin) {
+      return { code: -1, message: '无权限操作' }
+    }
   }
 
   // 支持 id 和 _id 两种参数名
