@@ -4,29 +4,86 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-// 云存储文件访问基础URL
-const CLOUD_STORAGE_BASE = 'https://636c-cloud1-3g56hllb4a005c0e-1330614701.tcb.qcloud.la'
+// 云存储环境配置
+const CLOUD_ENV = 'cloud1-3g56hllb4a005c0e'
+const CLOUD_STORAGE_PREFIX = '636c-cloud1-3g56hllb4a005c0e-1330614701'
 
-// 转换图片路径为完整URL
-function convertImageUrl(path) {
-  if (!path) return path
-  if (path.startsWith('http') || path.startsWith('cloud://')) return path
-  return `${CLOUD_STORAGE_BASE}/${path}`
-}
-
-// 转换对象中的图片字段
-function convertItemImages(item) {
-  if (!item) return item
-  if (item.coverImage) {
-    item.coverImage = convertImageUrl(item.coverImage)
+// 转换图片路径为临时URL（异步）
+async function convertImageUrls(items) {
+  if (!Array.isArray(items)) {
+    items = [items]
   }
-  if (item.images && Array.isArray(item.images)) {
-    item.images = item.images.map(convertImageUrl)
+  
+  // 收集所有需要转换的文件路径
+  const fileList = []
+  const pathMap = {} // 记录路径到fileID的映射
+  
+  for (const item of items) {
+    if (!item) continue
+    
+    if (item.coverImage && !item.coverImage.startsWith('http')) {
+      const fileID = `cloud://${CLOUD_ENV}.${CLOUD_STORAGE_PREFIX}/${item.coverImage}`
+      if (!pathMap[item.coverImage]) {
+        fileList.push(fileID)
+        pathMap[item.coverImage] = fileID
+      }
+    }
+    if (item.images && Array.isArray(item.images)) {
+      for (const img of item.images) {
+        if (!img.startsWith('http') && !pathMap[img]) {
+          const fileID = `cloud://${CLOUD_ENV}.${CLOUD_STORAGE_PREFIX}/${img}`
+          fileList.push(fileID)
+          pathMap[img] = fileID
+        }
+      }
+    }
+    if (item.avatar && !item.avatar.startsWith('http')) {
+      const fileID = `cloud://${CLOUD_ENV}.${CLOUD_STORAGE_PREFIX}/${item.avatar}`
+      if (!pathMap[item.avatar]) {
+        fileList.push(fileID)
+        pathMap[item.avatar] = fileID
+      }
+    }
   }
-  if (item.avatar) {
-    item.avatar = convertImageUrl(item.avatar)
+  
+  if (fileList.length === 0) return items
+  
+  try {
+    // 批量获取临时URL
+    const res = await cloud.getTempFileURL({ fileList })
+    const urlMap = {}
+    
+    if (res.fileList) {
+      for (const file of res.fileList) {
+        if (file.tempFileURL) {
+          // 从 fileID 提取路径部分作为key
+          const pathMatch = file.fileID.match(/cloud:\/\/[^/]+\.[^/]+\/(.+)$/)
+          if (pathMatch) {
+            urlMap[pathMatch[1]] = file.tempFileURL
+          }
+        }
+      }
+    }
+    
+    // 替换路径为临时URL
+    for (const item of items) {
+      if (!item) continue
+      
+      if (item.coverImage && urlMap[item.coverImage]) {
+        item.coverImage = urlMap[item.coverImage]
+      }
+      if (item.images && Array.isArray(item.images)) {
+        item.images = item.images.map(img => urlMap[img] || img)
+      }
+      if (item.avatar && urlMap[item.avatar]) {
+        item.avatar = urlMap[item.avatar]
+      }
+    }
+  } catch (err) {
+    console.error('获取临时图片URL失败:', err)
   }
-  return item
+  
+  return items
 }
 
 // HTTP 触发器入口
@@ -133,8 +190,8 @@ async function listPackages(data) {
     .orderBy('sortOrder', 'asc')
     .get()
   
-  // 转换图片路径为完整URL
-  const convertedList = list.map(convertItemImages)
+  // 转换图片路径为临时URL
+  const convertedList = await convertImageUrls(list)
   
   return {
     code: 0,
@@ -157,8 +214,8 @@ async function getPackageDetail(data) {
     return { code: -1, message: '套餐不存在' }
   }
   
-  // 转换图片路径为完整URL
-  convertItemImages(packageData)
+  // 转换图片路径为临时URL
+  await convertImageUrls([packageData])
   
   return {
     code: 0,

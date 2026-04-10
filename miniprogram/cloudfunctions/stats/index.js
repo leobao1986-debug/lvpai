@@ -40,6 +40,10 @@ async function handleRequest(event, context) {
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID || event.openid || ''
   
+  // 调试日志
+  console.log('handleRequest called with event:', JSON.stringify(event))
+  console.log('action:', action)
+  
   try {
     switch (action) {
       case 'overview':
