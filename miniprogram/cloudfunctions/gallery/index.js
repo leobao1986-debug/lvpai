@@ -4,6 +4,31 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 云存储文件访问基础URL
+const CLOUD_STORAGE_BASE = 'https://636c-cloud1-3g56hllb4a005c0e-1330614701.tcb.qcloud.la'
+
+// 转换图片路径为完整URL
+function convertImageUrl(path) {
+  if (!path) return path
+  if (path.startsWith('http') || path.startsWith('cloud://')) return path
+  return `${CLOUD_STORAGE_BASE}/${path}`
+}
+
+// 转换对象中的图片字段
+function convertItemImages(item) {
+  if (!item) return item
+  if (item.coverImage) {
+    item.coverImage = convertImageUrl(item.coverImage)
+  }
+  if (item.images && Array.isArray(item.images)) {
+    item.images = item.images.map(convertImageUrl)
+  }
+  if (item.avatar) {
+    item.avatar = convertImageUrl(item.avatar)
+  }
+  return item
+}
+
 // HTTP 触发器入口
 exports.main = async (event, context) => {
   // HTTP 触发器处理
@@ -120,11 +145,14 @@ async function listGallery(data) {
     .limit(pageSize)
     .get()
   
+  // 转换图片路径为完整URL
+  const convertedList = list.map(convertItemImages)
+  
   return {
     code: 0,
     message: 'success',
     data: {
-      list,
+      list: convertedList,
       total,
       page,
       pageSize
@@ -145,6 +173,9 @@ async function getGalleryDetail(data) {
   if (!galleryData) {
     return { code: -1, message: '客片不存在' }
   }
+  
+  // 转换图片路径为完整URL
+  convertItemImages(galleryData)
   
   return {
     code: 0,
@@ -355,6 +386,13 @@ async function getMyFavorites(data, openid) {
       ...fav,
       gallery: galleryMap[fav.galleryId] || null
     })).filter(item => item.gallery !== null)
+    
+    // 转换图片路径为完整URL
+    galleryList.forEach(item => {
+      if (item.gallery) {
+        convertItemImages(item.gallery)
+      }
+    })
   }
   
   return {

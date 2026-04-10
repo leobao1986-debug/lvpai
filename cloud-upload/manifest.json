@@ -1,0 +1,141 @@
+{
+  "generateTime": "2026-04-10T03:01:32.057Z",
+  "totalFiles": 16,
+  "successCount": 16,
+  "failCount": 0,
+  "compressOptions": {
+    "width": 1200,
+    "quality": 80,
+    "format": "jpeg"
+  },
+  "files": [
+    {
+      "source": "3.jpg",
+      "target": "gallery/couple/couple_01.jpg",
+      "success": true,
+      "originalSize": "25.63MB",
+      "outputSize": "274.14KB",
+      "compressionRatio": "99.0%"
+    },
+    {
+      "source": "4.jpg",
+      "target": "gallery/children/children_01.jpg",
+      "success": true,
+      "originalSize": "26.58MB",
+      "outputSize": "149.67KB",
+      "compressionRatio": "99.5%"
+    },
+    {
+      "source": "5.jpg",
+      "target": "gallery/mausoleum/mausoleum_01.jpg",
+      "success": true,
+      "originalSize": "26.34MB",
+      "outputSize": "196.33KB",
+      "compressionRatio": "99.3%"
+    },
+    {
+      "source": "6.jpg",
+      "target": "gallery/grassland/grassland_01.jpg",
+      "success": true,
+      "originalSize": "41.34MB",
+      "outputSize": "199.57KB",
+      "compressionRatio": "99.5%"
+    },
+    {
+      "source": "8.jpg",
+      "target": "gallery/children/children_02.jpg",
+      "success": true,
+      "originalSize": "18.73MB",
+      "outputSize": "151.39KB",
+      "compressionRatio": "99.2%"
+    },
+    {
+      "source": "10.jpg",
+      "target": "gallery/grassland/grassland_02.jpg",
+      "success": true,
+      "originalSize": "42.40MB",
+      "outputSize": "246.14KB",
+      "compressionRatio": "99.4%"
+    },
+    {
+      "source": "11.jpg",
+      "target": "gallery/couple/couple_02.jpg",
+      "success": true,
+      "originalSize": "18.81MB",
+      "outputSize": "126.52KB",
+      "compressionRatio": "99.3%"
+    },
+    {
+      "source": "12.jpg",
+      "target": "gallery/children/children_03.jpg",
+      "success": true,
+      "originalSize": "32.08MB",
+      "outputSize": "174.39KB",
+      "compressionRatio": "99.5%"
+    },
+    {
+      "source": "13.jpg",
+      "target": "gallery/mausoleum/mausoleum_02.jpg",
+      "success": true,
+      "originalSize": "0.14MB",
+      "outputSize": "96.59KB",
+      "compressionRatio": "32.5%"
+    },
+    {
+      "source": "14.jpg",
+      "target": "gallery/grassland/grassland_03.jpg",
+      "success": true,
+      "originalSize": "33.14MB",
+      "outputSize": "195.20KB",
+      "compressionRatio": "99.4%"
+    },
+    {
+      "source": "15.jpg",
+      "target": "gallery/couple/couple_03.jpg",
+      "success": true,
+      "originalSize": "28.39MB",
+      "outputSize": "178.99KB",
+      "compressionRatio": "99.4%"
+    },
+    {
+      "source": "16.jpg",
+      "target": "gallery/children/children_04.jpg",
+      "success": true,
+      "originalSize": "28.98MB",
+      "outputSize": "218.45KB",
+      "compressionRatio": "99.3%"
+    },
+    {
+      "source": "17.jpg",
+      "target": "gallery/mausoleum/mausoleum_03.jpg",
+      "success": true,
+      "originalSize": "26.43MB",
+      "outputSize": "143.56KB",
+      "compressionRatio": "99.5%"
+    },
+    {
+      "source": "18.jpg",
+      "target": "gallery/mausoleum/mausoleum_04.jpg",
+      "success": true,
+      "originalSize": "0.85MB",
+      "outputSize": "215.78KB",
+      "compressionRatio": "75.2%"
+    },
+    {
+      "source": "微信图片_20260409113908.jpg",
+      "target": "gallery/grassland/grassland_04.jpg",
+      "success": true,
+      "originalSize": "19.98MB",
+      "outputSize": "147.54KB",
+      "compressionRatio": "99.3%"
+    },
+    {
+      "source": "微信图片_20260409113938.jpg",
+      "target": "gallery/couple/couple_04.jpg",
+      "success": true,
+      "originalSize": "28.57MB",
+      "outputSize": "193.93KB",
+      "compressionRatio": "99.3%"
+    }
+  ]
+}
