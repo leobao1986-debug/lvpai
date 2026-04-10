@@ -7,6 +7,12 @@ const $ = db.command.aggregate
 
 // HTTP 触发器入口
 exports.main = async (event, context) => {
+  // 添加详细日志
+  console.log('[stats] ========== 云函数开始执行 ==========')
+  console.log('[stats] 原始event:', JSON.stringify(event))
+  console.log('[stats] event.body:', event.body)
+  console.log('[stats] event.httpMethod:', event.httpMethod)
+  
   // HTTP 触发器处理
   if (event.httpMethod) {
     if (event.httpMethod === 'OPTIONS') {
@@ -20,19 +26,35 @@ exports.main = async (event, context) => {
         body: ''
       }
     }
-    const parsedBody = JSON.parse(event.body || '{}')
-    console.log('[stats] HTTP调用, body:', event.body, 'parsed:', parsedBody)
     
-    // 兼容两种参数格式：
-    // 1. { action: 'xxx', data: { id: 'xxx' } } - 小程序格式
-    // 2. { action: 'xxx', id: 'xxx' } - HTTP前端格式
-    const body = parsedBody.data 
-      ? parsedBody 
-      : { action: parsedBody.action, data: { ...parsedBody, action: undefined } }
-    delete body.data.action
+    let parsedBody = {}
+    try {
+      parsedBody = JSON.parse(event.body || '{}')
+    } catch (e) {
+      console.error('[stats] JSON解析失败:', e)
+      parsedBody = {}
+    }
     
-    console.log('[stats] 处理后参数:', body)
+    console.log('[stats] HTTP调用, 解析后的body:', JSON.stringify(parsedBody))
+    console.log('[stats] parsedBody.action:', parsedBody.action)
+    console.log('[stats] parsedBody.data:', parsedBody.data)
+    
+    // 构建标准格式的参数
+    let body = {}
+    if (parsedBody.data) {
+      // 格式1: { action: 'xxx', data: { ... } }
+      body = { action: parsedBody.action, data: parsedBody.data }
+    } else {
+      // 格式2: { action: 'xxx', id: 'xxx', ... }
+      const { action, ...otherParams } = parsedBody
+      body = { action: action, data: otherParams }
+    }
+    
+    console.log('[stats] 处理后参数:', JSON.stringify(body))
+    console.log('[stats] 传入handleRequest的action:', body.action)
+    
     const result = await handleRequest(body, context, true)  // HTTP调用标记为true
+    console.log('[stats] handleRequest返回:', JSON.stringify(result))
     return {
       statusCode: 200,
       headers: {
@@ -42,7 +64,9 @@ exports.main = async (event, context) => {
       body: JSON.stringify(result)
     }
   }
+  
   // 小程序直接调用
+  console.log('[stats] 小程序直接调用')
   return await handleRequest(event, context, false)  // 小程序调用标记为false
 }
 

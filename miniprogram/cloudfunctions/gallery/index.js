@@ -303,13 +303,19 @@ async function deleteGallery(data, openid, isHttpCall = false) {
     // 删除客片
     await transaction.collection('gallery').doc(id).remove()
     
-    // 删除相关收藏记录
-    const { data: favorites } = await transaction.collection('favorites').where({
-      galleryId: id
-    }).get()
-    
-    for (const fav of favorites) {
-      await transaction.collection('favorites').doc(fav._id).remove()
+    // 删除相关收藏记录（如果favorites集合存在）
+    try {
+      const { data: favorites } = await transaction.collection('favorites').where({
+        galleryId: id
+      }).get()
+      
+      for (const fav of favorites) {
+        await transaction.collection('favorites').doc(fav._id).remove()
+      }
+      console.log(`[gallery] 已删除 ${favorites.length} 条收藏记录`)
+    } catch (favErr) {
+      // favorites集合可能不存在，忽略错误
+      console.log('[gallery] 删除收藏记录时出错（可能集合不存在）:', favErr.message || favErr)
     }
     
     await transaction.commit()
