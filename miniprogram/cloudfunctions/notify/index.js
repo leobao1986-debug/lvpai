@@ -19,7 +19,18 @@ exports.main = async (event, context) => {
         body: ''
       }
     }
-    const body = JSON.parse(event.body || '{}')
+    const parsedBody = JSON.parse(event.body || '{}')
+    console.log('[notify] HTTP调用, body:', event.body, 'parsed:', parsedBody)
+    
+    // 兼容两种参数格式：
+    // 1. { action: 'xxx', data: { id: 'xxx' } } - 小程序格式
+    // 2. { action: 'xxx', id: 'xxx' } - HTTP前端格式
+    const body = parsedBody.data 
+      ? parsedBody 
+      : { action: parsedBody.action, data: { ...parsedBody, action: undefined } }
+    delete body.data.action
+    
+    console.log('[notify] 处理后参数:', body)
     const result = await handleRequest(body, context)
     return {
       statusCode: 200,
