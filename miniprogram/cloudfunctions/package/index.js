@@ -66,9 +66,30 @@ exports.main = async (event, context) => {
 }
 
 async function handleRequest(event, context, isHttpCall = false) {
-  const { action, data = {} } = event
+  // 支持两种参数格式：
+  // 1. { action: 'xxx', data: { ... } } - 标准格式
+  // 2. { action: 'xxx', id: 'xxx', ... } - 扁平格式（HTTP调用）
+  let { action, data = {} } = event
+  
+  // 如果 data 为空但 event 中有其他参数，合并到 data
+  if (Object.keys(data).length === 0) {
+    const { action: _, data: __, ...otherParams } = event
+    if (Object.keys(otherParams).length > 0) {
+      data = { ...data, ...otherParams }
+    }
+  }
+  
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID || event.openid || ''
+  
+  // 调试日志
+  console.log('[package] handleRequest called with action:', action)
+  console.log('[package] data:', JSON.stringify(data))
+  
+  // 确保 action 是字符串
+  if (typeof action === 'string') {
+    action = action.trim()
+  }
   
   try {
     switch (action) {
@@ -279,10 +300,17 @@ async function updatePackageStatus(data, openid, isHttpCall = false) {
 
   // 支持 id 和 _id 两种参数名
   const id = data.id || data._id
-  const { status } = data
+  let { status } = data
   
   if (!id) {
     return { code: -1, message: '套餐ID不能为空' }
+  }
+  
+  // 兼容前端发送的 'on'/'off' 状态值，映射为 'active'/'inactive'
+  if (status === 'on') {
+    status = 'active'
+  } else if (status === 'off') {
+    status = 'inactive'
   }
   
   if (!['active', 'inactive'].includes(status)) {
