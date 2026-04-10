@@ -71,46 +71,16 @@ exports.main = async (event, context) => {
 }
 
 async function handleRequest(event, context, isHttpCall = false) {
-  // 支持两种参数格式：
-  // 1. { action: 'xxx', data: { ... } } - 标准格式
-  // 2. { action: 'xxx', id: 'xxx', ... } - 扁平格式（HTTP调用）
-  let { action, data = {} } = event
-  
-  // 如果 data 为空但 event 中有其他参数，合并到 data
-  if (Object.keys(data).length === 0) {
-    const { action: _, data: __, ...otherParams } = event
-    if (Object.keys(otherParams).length > 0) {
-      data = { ...data, ...otherParams }
-    }
-  }
-  
   const wxContext = cloud.getWXContext()
   const openid = wxContext.OPENID || event.openid || ''
   
-  // 调试日志
-  console.log('handleRequest called with event:', JSON.stringify(event))
-  console.log('action:', action, 'type:', typeof action)
-  console.log('data:', JSON.stringify(data))
-  console.log('isHttpCall:', isHttpCall)
+  console.log('[stats] handleRequest, isHttpCall:', isHttpCall)
   
-  // 确保 action 是字符串
-  if (typeof action !== 'string') {
-    console.error('action is not a string:', action)
-    return { code: -1, message: '操作类型无效' }
-  }
-  
-  // 去除可能的空白字符
-  action = action.trim()
-  
+  // stats 云函数只有 overview 一个操作，直接执行
   try {
-    switch (action) {
-      case 'overview':
-        return await getOverview(data, openid, isHttpCall)
-      default:
-        return { code: -1, message: `未知操作: ${action}` }
-    }
+    return await getOverview({}, openid, isHttpCall)
   } catch (err) {
-    console.error('云函数执行错误:', err)
+    console.error('[stats] 执行错误:', err)
     return { code: -1, message: err.message || '服务器内部错误' }
   }
 }
