@@ -4,86 +4,24 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-// 云存储环境配置
-const CLOUD_ENV = 'cloud1-3g56hllb4a005c0e'
-const CLOUD_STORAGE_PREFIX = '636c-cloud1-3g56hllb4a005c0e-1419657853'
+// 云存储CDN基础URL（公开可读）
+const CLOUD_STORAGE_BASE = 'https://636c-cloud1-3g56hllb4a005c0e-1419657853.tcb.qcloud.la'
 
-// 转换图片路径为临时URL（异步）
-async function convertImageUrls(items) {
-  if (!Array.isArray(items)) {
-    items = [items]
+// 转换图片路径为完整CDN URL
+function convertImageUrl(path) {
+  if (!path) return path
+  if (path.startsWith('http') || path.startsWith('cloud://')) return path
+  return `${CLOUD_STORAGE_BASE}/${path}`
+}
+
+function convertItemImages(item) {
+  if (!item) return item
+  if (item.coverImage) item.coverImage = convertImageUrl(item.coverImage)
+  if (item.images && Array.isArray(item.images)) {
+    item.images = item.images.map(convertImageUrl)
   }
-  
-  // 收集所有需要转换的文件路径
-  const fileList = []
-  const pathMap = {} // 记录路径到fileID的映射
-  
-  for (const item of items) {
-    if (!item) continue
-    
-    if (item.coverImage && !item.coverImage.startsWith('http')) {
-      const fileID = `cloud://${CLOUD_ENV}.${CLOUD_STORAGE_PREFIX}/${item.coverImage}`
-      if (!pathMap[item.coverImage]) {
-        fileList.push(fileID)
-        pathMap[item.coverImage] = fileID
-      }
-    }
-    if (item.images && Array.isArray(item.images)) {
-      for (const img of item.images) {
-        if (!img.startsWith('http') && !pathMap[img]) {
-          const fileID = `cloud://${CLOUD_ENV}.${CLOUD_STORAGE_PREFIX}/${img}`
-          fileList.push(fileID)
-          pathMap[img] = fileID
-        }
-      }
-    }
-    if (item.avatar && !item.avatar.startsWith('http')) {
-      const fileID = `cloud://${CLOUD_ENV}.${CLOUD_STORAGE_PREFIX}/${item.avatar}`
-      if (!pathMap[item.avatar]) {
-        fileList.push(fileID)
-        pathMap[item.avatar] = fileID
-      }
-    }
-  }
-  
-  if (fileList.length === 0) return items
-  
-  try {
-    // 批量获取临时URL
-    const res = await cloud.getTempFileURL({ fileList })
-    const urlMap = {}
-    
-    if (res.fileList) {
-      for (const file of res.fileList) {
-        if (file.tempFileURL) {
-          // 从 fileID 提取路径部分作为key
-          const pathMatch = file.fileID.match(/cloud:\/\/[^/]+\.[^/]+\/(.+)$/)
-          if (pathMatch) {
-            urlMap[pathMatch[1]] = file.tempFileURL
-          }
-        }
-      }
-    }
-    
-    // 替换路径为临时URL
-    for (const item of items) {
-      if (!item) continue
-      
-      if (item.coverImage && urlMap[item.coverImage]) {
-        item.coverImage = urlMap[item.coverImage]
-      }
-      if (item.images && Array.isArray(item.images)) {
-        item.images = item.images.map(img => urlMap[img] || img)
-      }
-      if (item.avatar && urlMap[item.avatar]) {
-        item.avatar = urlMap[item.avatar]
-      }
-    }
-  } catch (err) {
-    console.error('获取临时图片URL失败:', err)
-  }
-  
-  return items
+  if (item.avatar) item.avatar = convertImageUrl(item.avatar)
+  return item
 }
 
 // HTTP 触发器入口
@@ -202,8 +140,8 @@ async function listGallery(data) {
     .limit(pageSize)
     .get()
   
-  // 转换图片路径为临时URL
-  const convertedList = await convertImageUrls(list)
+  // 转换图片路径为CDN URL
+  const convertedList = list.map(convertItemImages)
   
   return {
     code: 0,
@@ -231,8 +169,8 @@ async function getGalleryDetail(data) {
     return { code: -1, message: '客片不存在' }
   }
   
-  // 转换图片路径为临时URL
-  await convertImageUrls([galleryData])
+  // 转换图片路径为CDN URL
+  convertItemImages(galleryData)
   
   return {
     code: 0,
@@ -444,11 +382,12 @@ async function getMyFavorites(data, openid) {
       gallery: galleryMap[fav.galleryId] || null
     })).filter(item => item.gallery !== null)
     
-    // 转换图片路径为临时URL
-    const galleriesToConvert = galleryList.map(item => item.gallery).filter(g => g)
-    if (galleriesToConvert.length > 0) {
-      await convertImageUrls(galleriesToConvert)
-    }
+    // 转换图片路径为CDN URL
+    galleryList.forEach(item => {
+      if (item.gallery) {
+        convertItemImages(item.gallery)
+      }
+    })
   }
   
   return {
