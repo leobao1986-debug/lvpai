@@ -1,0 +1,296 @@
+/* 品牌色 - 青绿色系 */
+$brand-color: #1a9b8c;
+$brand-color-light: #2ab5a8;
+$brand-color-dark: #0d5c54;
+
+/* 蒙古族文化色彩 - 青绿色系 */
+$mongol-red: #1a9b8c;        /* 主色 - 青绿色 */
+$mongol-gold: #f5c842;       /* 金黄色 - 价格标签、装饰 */
+$mongol-gold-light: #fae8a0; /* 浅金色 - 淡金装饰 */
+$mongol-blue: #1a9b8c;       /* 信息色 - 与主色统一 */
+$mongol-green: #2ab5a8;      /* 亮青绿 - 成功色 */
+$mongol-brown: #0d5c54;      /* 深青绿 - 深色/侧边栏 */
+$mongol-cream: #f0f8f7;      /* 淡青绿背景 */
+$mongol-dark: #0a4a43;       /* 更深青绿 */
+
+/* 功能色 */
+$success-color: #07c160;
+$warning-color: #ff976a;
+$error-color: #ee0a24;
+
+/* 文字色 */
+$text-color: #333333;
+$text-color-secondary: #666666;
+$text-color-placeholder: #999999;
+
+/* 背景色 */
+$bg-color: #f5f5f5;
+$bg-color-white: #ffffff;
+
+/* 边框色 */
+$border-color: #ebedf0;
+
+/* 间距 */
+$spacing-xs: 8rpx;
+$spacing-sm: 16rpx;
+$spacing-md: 24rpx;
+$spacing-lg: 32rpx;
+$spacing-xl: 48rpx;
+
+/* 圆角 */
+$radius-sm: 8rpx;
+$radius-md: 12rpx;
+$radius-lg: 16rpx;
+$radius-round: 999rpx;
+
+/* 字号 */
+$font-size-xs: 20rpx;
+$font-size-sm: 24rpx;
+$font-size-md: 28rpx;
+$font-size-lg: 32rpx;
+$font-size-xl: 36rpx;
+$font-size-xxl: 44rpx;
+
+/* 蒙古纹样装饰线 - 用 CSS border + 渐变实现 */
+@mixin mongol-border-top {
+  border-top: 3rpx solid $mongol-gold;
+  position: relative;
+  &::before {
+    content: '';
+    position: absolute;
+    top: -8rpx;
+    left: 0;
+    right: 0;
+    height: 2rpx;
+    background: $mongol-gold;
+    opacity: 0.5;
+  }
+}
+
+@mixin mongol-border-bottom {
+  border-bottom: 3rpx solid $mongol-gold;
+  position: relative;
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -8rpx;
+    left: 0;
+    right: 0;
+    height: 2rpx;
+    background: $mongol-gold;
+    opacity: 0.5;
+  }
+}
+
+/* 金色渐变背景 */
+@mixin mongol-gold-gradient {
+  background: linear-gradient(135deg, $mongol-gold, #d4b06a, $mongol-gold-light);
+}
+
+/* 蒙古红渐变 */
+@mixin mongol-red-gradient {
+  background: linear-gradient(135deg, $mongol-red, #a52020, $brand-color);
+}
+
+/* 蒙古包剪影装饰 */
+@mixin yurt-silhouette($size: 40rpx, $color: rgba(255,255,255,0.6)) {
+  position: relative;
+ width: $size * 2;
+  height: $size * 1.2;
+  
+  &::before {
+    // 三角形屋顶
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: $size solid transparent;
+    border-right: $size solid transparent;
+    border-bottom: $size * 0.6 solid $color;
+  }
+  
+  &::after {
+    // 半圆形主体
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: $size * 1.8;
+    height: $size * 0.9;
+    background: $color;
+    border-radius: $size * 1.8 $size * 1.8 0 0;
+  }
+}
+
+/* 白云装饰 */
+@mixin cloud-decoration($width: 60rpx, $color: rgba(255,255,255,0.15)) {
+  position: absolute;
+  width: $width;
+  height: $width * 0.35;
+  background: $color;
+  border-radius: $width;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    background: $color;
+    border-radius: 50%;
+    width: $width * 0.5;
+    height: $width * 0.5;
+    top: -$width * 0.25;
+    left: $width * 0.25;
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    background: $color;
+    border-radius: 50%;
+    width: $width * 0.35;
+    height: $width * 0.35;
+    top: -$width * 0.15;
+    right: $width * 0.25;
+  }
+}
+
+/* 勒勒车车轮装饰 */
+@mixin wheel-decoration($size: 20rpx, $color: $mongol-gold) {
+  width: $size;
+  height: $size;
+  border: 2rpx solid $color;
+  border-radius: 50%;
+  position: relative;
+  
+  &::before, &::after {
+    content: '';
+    position: absolute;
+    background: $color;
+  }
+  
+  &::before {
+    width: 100%;
+    height: 2rpx;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+  }
+  
+  &::after {
+    width: 2rpx;
+    height: 100%;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+  }
+}
+
+/* 哈达装饰线 */
+@mixin hada-line($height: 2rpx) {
+  height: $height;
+  background: linear-gradient(90deg, transparent, $mongol-gold, transparent);
+}
+
+/* 页面背景蒙古纹样 */
+@mixin mongol-bg-pattern {
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba($mongol-gold, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba($mongol-blue, 0.03) 0%, transparent 50%);
+}
+
+// ==================== 全局图片容器样式类 ====================
+// 使用padding-bottom实现固定宽高比的图片容器
+// 适用于 aspectFill 模式的图片
+
+// 16:9 宽高比容器
+.img-ratio-16-9 {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; // 9 / 16 = 0.5625
+  overflow: hidden;
+  
+  image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// 4:3 宽高比容器
+.img-ratio-4-3 {
+  position: relative;
+  width: 100%;
+  padding-bottom: 75%; // 3 / 4 = 0.75
+  overflow: hidden;
+  
+  image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// 1:1 正方形容器
+.img-ratio-1-1 {
+  position: relative;
+  width: 100%;
+  padding-bottom: 100%;
+  overflow: hidden;
+  
+  image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// 3:4 竖向宽高比容器
+.img-ratio-3-4 {
+  position: relative;
+  width: 100%;
+  padding-bottom: 133.33%; // 4 / 3 = 1.3333
+  overflow: hidden;
+  
+  image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+// 图片完整显示容器（适用于 aspectFit 模式）
+.img-contain {
+  width: 100%;
+  height: auto;
+  
+  image {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+}
+
+// 图片宽度自适应（适用于 widthFix 模式）
+.img-width-fix {
+  width: 100%;
+  
+  image {
+    width: 100%;
+    height: auto;
+  }
+}

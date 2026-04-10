@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
+
+# UniApp build output
+miniprogram/dist/
+miniprogram/node_modules/
+unpackage/
+
+# Admin build output
+admin/node_modules/
+admin/dist/
+
+# Environment files
+.env.local
+.env.*.local
+
+# Photo directory (large files)
+photo/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temp files
+*.tmp
+*.temp

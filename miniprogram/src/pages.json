@@ -1,0 +1,176 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "朵兰摄影",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/packages/list",
+      "style": {
+        "navigationBarTitleText": "拍摄套餐"
+      }
+    },
+    {
+      "path": "pages/packages/detail",
+      "style": {
+        "navigationBarTitleText": "套餐详情"
+      }
+    },
+    {
+      "path": "pages/gallery/index",
+      "style": {
+        "navigationBarTitleText": "客片欣赏"
+      }
+    },
+    {
+      "path": "pages/gallery/detail",
+      "style": {
+        "navigationBarTitleText": "客片详情"
+      }
+    },
+    {
+      "path": "pages/booking/index",
+      "style": {
+        "navigationBarTitleText": "预约拍摄"
+      }
+    },
+    {
+      "path": "pages/payment/index",
+      "style": {
+        "navigationBarTitleText": "支付确认"
+      }
+    },
+    {
+      "path": "pages/payment/result",
+      "style": {
+        "navigationBarTitleText": "支付结果"
+      }
+    },
+    {
+      "path": "pages/store/index",
+      "style": {
+        "navigationBarTitleText": "门店导航"
+      }
+    },
+    {
+      "path": "pages/mine/index",
+      "style": {
+        "navigationBarTitleText": "个人中心"
+      }
+    },
+    {
+      "path": "pages/order/detail",
+      "style": {
+        "navigationBarTitleText": "订单详情"
+      }
+    },
+    {
+      "path": "pages/order/list",
+      "style": {
+        "navigationBarTitleText": "我的订单"
+      }
+    }
+  ],
+  "subPackages": [
+    {
+      "root": "pages-admin",
+      "pages": [
+        {
+          "path": "dashboard/index",
+          "style": {
+            "navigationBarTitleText": "管理后台"
+          }
+        },
+        {
+          "path": "orders/index",
+          "style": {
+            "navigationBarTitleText": "订单管理"
+          }
+        },
+        {
+          "path": "orders/detail",
+          "style": {
+            "navigationBarTitleText": "订单详情"
+          }
+        },
+        {
+          "path": "packages-manage/index",
+          "style": {
+            "navigationBarTitleText": "套餐管理"
+          }
+        },
+        {
+          "path": "packages-manage/edit",
+          "style": {
+            "navigationBarTitleText": "编辑套餐"
+          }
+        },
+        {
+          "path": "gallery-manage/index",
+          "style": {
+            "navigationBarTitleText": "客片管理"
+          }
+        },
+        {
+          "path": "gallery-manage/edit",
+          "style": {
+            "navigationBarTitleText": "编辑客片"
+          }
+        },
+        {
+          "path": "settings/index",
+          "style": {
+            "navigationBarTitleText": "店铺设置"
+          }
+        }
+      ]
+    }
+  ],
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#1a9b8c",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/packages/list",
+        "text": "套餐",
+        "iconPath": "static/tabbar/package.png",
+        "selectedIconPath": "static/tabbar/package-active.png"
+      },
+      {
+        "pagePath": "pages/gallery/index",
+        "text": "客片",
+        "iconPath": "static/tabbar/gallery.png",
+        "selectedIconPath": "static/tabbar/gallery-active.png"
+      },
+      {
+        "pagePath": "pages/store/index",
+        "text": "门店",
+        "iconPath": "static/tabbar/store.png",
+        "selectedIconPath": "static/tabbar/store-active.png"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的",
+        "iconPath": "static/tabbar/mine.png",
+        "selectedIconPath": "static/tabbar/mine-active.png"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "朵兰摄影",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f5f5f5"
+  }
+}

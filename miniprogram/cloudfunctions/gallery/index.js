@@ -1,0 +1,359 @@
+const cloud = require('wx-server-sdk')
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
+
+const db = cloud.database()
+const _ = db.command
+
+// 管理员权限校验
+async function checkAdmin(openid) {
+  try {
+    const { data } = await db.collection('users').where({
+      _openid: openid
+    }).get()
+    
+    if (data.length === 0) {
+      return false
+    }
+    
+    const user = data[0]
+    return user.role === 'admin' || user.role === 'superAdmin'
+  } catch (err) {
+    console.error('校验管理员权限失败:', err)
+    return false
+  }
+}
+
+exports.main = async (event, context) => {
+  const { action, data = {} } = event
+  const wxContext = cloud.getWXContext()
+  const openid = wxContext.OPENID
+  
+  try {
+    switch (action) {
+      case 'list':
+        return await listGallery(data)
+      
+      case 'detail':
+        return await getGalleryDetail(data)
+      
+      case 'create':
+        return await createGallery(data, openid)
+      
+      case 'update':
+        return await updateGallery(data, openid)
+      
+      case 'delete':
+        return await deleteGallery(data, openid)
+      
+      case 'favorite':
+        return await toggleFavorite(data, openid)
+      
+      case 'myFavorites':
+        return await getMyFavorites(data, openid)
+      
+      case 'checkFavorite':
+        return await checkFavorite(data, openid)
+      
+      default:
+        return { code: -1, message: '未知操作' }
+    }
+  } catch (err) {
+    console.error('云函数执行错误:', err)
+    return { code: -1, message: err.message || '服务器内部错误' }
+  }
+}
+
+// 获取客片列表
+async function listGallery(data) {
+  const { category, page = 1, pageSize = 10, isAdmin } = data
+  
+  let whereCondition = {}
+  
+  // 分类筛选
+  if (category) {
+    whereCondition.category = category
+  }
+  
+  // 用户端只返回已发布的客片
+  if (!isAdmin) {
+    whereCondition.status = 'published'
+  }
+  
+  // 获取总数
+  const { total } = await db.collection('gallery').where(whereCondition).count()
+  
+  // 获取列表
+  const { data: list } = await db.collection('gallery')
+    .where(whereCondition)
+    .orderBy('createTime', 'desc')
+    .skip((page - 1) * pageSize)
+    .limit(pageSize)
+    .get()
+  
+  return {
+    code: 0,
+    message: 'success',
+    data: {
+      list,
+      total,
+      page,
+      pageSize
+    }
+  }
+}
+
+// 获取客片详情
+async function getGalleryDetail(data) {
+  const { id } = data
+  
+  if (!id) {
+    return { code: -1, message: '客片ID不能为空' }
+  }
+  
+  const { data: galleryData } = await db.collection('gallery').doc(id).get()
+  
+  if (!galleryData) {
+    return { code: -1, message: '客片不存在' }
+  }
+  
+  return {
+    code: 0,
+    message: 'success',
+    data: galleryData
+  }
+}
+
+// 创建客片（管理员）
+async function createGallery(data, openid) {
+  // 校验管理员权限
+  const isAdmin = await checkAdmin(openid)
+  if (!isAdmin) {
+    return { code: -1, message: '无权限操作' }
+  }
+  
+  const now = db.serverDate()
+  
+  const galleryData = {
+    ...data,
+    likes: 0,
+    createTime: now,
+    updateTime: now
+  }
+  
+  const { _id } = await db.collection('gallery').add({
+    data: galleryData
+  })
+  
+  return {
+    code: 0,
+    message: 'success',
+    data: { _id, ...galleryData }
+  }
+}
+
+// 更新客片（管理员）
+async function updateGallery(data, openid) {
+  // 校验管理员权限
+  const isAdmin = await checkAdmin(openid)
+  if (!isAdmin) {
+    return { code: -1, message: '无权限操作' }
+  }
+  
+  const { id, ...updateData } = data
+  
+  if (!id) {
+    return { code: -1, message: '客片ID不能为空' }
+  }
+  
+  const now = db.serverDate()
+  
+  await db.collection('gallery').doc(id).update({
+    data: {
+      ...updateData,
+      updateTime: now
+    }
+  })
+  
+  return {
+    code: 0,
+    message: 'success',
+    data: { id }
+  }
+}
+
+// 删除客片（管理员）
+async function deleteGallery(data, openid) {
+  // 校验管理员权限
+  const isAdmin = await checkAdmin(openid)
+  if (!isAdmin) {
+    return { code: -1, message: '无权限操作' }
+  }
+  
+  const { id } = data
+  
+  if (!id) {
+    return { code: -1, message: '客片ID不能为空' }
+  }
+  
+  // 开启事务
+  const transaction = await db.startTransaction()
+  
+  try {
+    // 删除客片
+    await transaction.collection('gallery').doc(id).remove()
+    
+    // 删除相关收藏记录
+    const { data: favorites } = await transaction.collection('favorites').where({
+      galleryId: id
+    }).get()
+    
+    for (const fav of favorites) {
+      await transaction.collection('favorites').doc(fav._id).remove()
+    }
+    
+    await transaction.commit()
+    
+    return {
+      code: 0,
+      message: 'success',
+      data: { id }
+    }
+  } catch (err) {
+    await transaction.rollback()
+    throw err
+  }
+}
+
+// 切换收藏状态
+async function toggleFavorite(data, openid) {
+  const { galleryId } = data
+  
+  if (!galleryId) {
+    return { code: -1, message: '客片ID不能为空' }
+  }
+  
+  // 查询是否已收藏
+  const { data: existingFav } = await db.collection('favorites').where({
+    userId: openid,
+    galleryId: galleryId
+  }).get()
+  
+  const isFavorited = existingFav.length > 0
+  
+  if (isFavorited) {
+    // 取消收藏
+    await db.collection('favorites').doc(existingFav[0]._id).remove()
+    
+    // 减少点赞数
+    await db.collection('gallery').doc(galleryId).update({
+      data: {
+        likes: _.inc(-1)
+      }
+    })
+    
+    return {
+      code: 0,
+      message: 'success',
+      data: { isFavorited: false }
+    }
+  } else {
+    // 添加收藏
+    const now = db.serverDate()
+    await db.collection('favorites').add({
+      data: {
+        userId: openid,
+        galleryId: galleryId,
+        createTime: now
+      }
+    })
+    
+    // 增加点赞数
+    await db.collection('gallery').doc(galleryId).update({
+      data: {
+        likes: _.inc(1)
+      }
+    })
+    
+    return {
+      code: 0,
+      message: 'success',
+      data: { isFavorited: true }
+    }
+  }
+}
+
+// 获取我的收藏列表
+async function getMyFavorites(data, openid) {
+  const { page = 1, pageSize = 10 } = data
+  
+  // 获取收藏记录
+  const { data: favorites } = await db.collection('favorites')
+    .where({
+      userId: openid
+    })
+    .orderBy('createTime', 'desc')
+    .skip((page - 1) * pageSize)
+    .limit(pageSize)
+    .get()
+  
+  // 获取总数
+  const { total } = await db.collection('favorites').where({
+    userId: openid
+  }).count()
+  
+  // 联查 gallery 信息
+  const galleryIds = favorites.map(fav => fav.galleryId)
+  
+  let galleryList = []
+  if (galleryIds.length > 0) {
+    const { data: galleries } = await db.collection('gallery')
+      .where({
+        _id: _.in(galleryIds),
+        status: 'published'
+      })
+      .get()
+    
+    // 构建 galleryId -> gallery 的映射
+    const galleryMap = {}
+    galleries.forEach(g => {
+      galleryMap[g._id] = g
+    })
+    
+    // 组装结果
+    galleryList = favorites.map(fav => ({
+      ...fav,
+      gallery: galleryMap[fav.galleryId] || null
+    })).filter(item => item.gallery !== null)
+  }
+  
+  return {
+    code: 0,
+    message: 'success',
+    data: {
+      list: galleryList,
+      total,
+      page,
+      pageSize
+    }
+  }
+}
+
+// 检查是否已收藏
+async function checkFavorite(data, openid) {
+  const { galleryId } = data
+  
+  if (!galleryId) {
+    return { code: -1, message: '客片ID不能为空' }
+  }
+  
+  const { data: existingFav } = await db.collection('favorites').where({
+    userId: openid,
+    galleryId: galleryId
+  }).get()
+  
+  return {
+    code: 0,
+    message: 'success',
+    data: { isFavorited: existingFav.length > 0 }
+  }
+}
