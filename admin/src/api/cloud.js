@@ -8,27 +8,36 @@ const BASE_URL = import.meta.env.VITE_CLOUD_BASE_URL || ''
  * 开发环境使用 Mock 数据
  */
 export const callFunction = async (name, data = {}) => {
-  // 如果有云环境 URL，走 HTTP 调用
+  // 1. 如果有 BASE_URL，通过 HTTP 调用云函数
   if (BASE_URL) {
     try {
-      const res = await fetch(`${BASE_URL}/${name}`, {
+      const token = localStorage.getItem('adminToken') || ''
+      const response = await fetch(`${BASE_URL}/${name}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(data)
       })
-      const result = await res.json()
-      if (result.code === 0) return result
-      throw new Error(result.message || '请求失败')
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const result = await response.json()
+      if (result.code !== 0) {
+        throw new Error(result.message || '请求失败')
+      }
+      return result
     } catch (err) {
-      console.warn(`云函数 ${name} 调用失败，使用 Mock:`, err)
+      console.warn(`云函数 ${name} HTTP调用失败，降级到Mock:`, err.message)
+      // 降级到 Mock
     }
   }
-  
-  // Mock 兜底
+
+  // 2. Mock 降级
   const mockResult = getMockData(name, data)
-  if (mockResult) {
-    console.log(`[Mock] ${name}.${data?.action}`)
-    return mockResult
-  }
-  throw new Error(`无法处理请求: ${name}.${data?.action}`)
+  if (mockResult) return mockResult
+  throw new Error(`无法处理请求: ${name}`)
 }

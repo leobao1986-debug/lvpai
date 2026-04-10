@@ -4,10 +4,40 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const usersCollection = db.collection('users')
 
+// HTTP 触发器入口
 exports.main = async (event, context) => {
-  const { action, data } = event
+  // HTTP 触发器处理
+  if (event.httpMethod) {
+    if (event.httpMethod === 'OPTIONS') {
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CloudBase-Authorization',
+        },
+        body: ''
+      }
+    }
+    const body = JSON.parse(event.body || '{}')
+    const result = await handleRequest(body, context)
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(result)
+    }
+  }
+  // 小程序直接调用
+  return await handleRequest(event, context)
+}
+
+async function handleRequest(event, context) {
+  const { action, data = {} } = event
   const wxContext = cloud.getWXContext()
-  const openid = wxContext.OPENID
+  const openid = wxContext.OPENID || event.openid || ''
 
   try {
     switch (action) {
@@ -22,7 +52,7 @@ exports.main = async (event, context) => {
       case 'setAdmin':
         return await handleSetAdmin(openid, data)
       default:
-        return { code: -1, message: '未知操作' }
+        return { code: -1, message: `未知操作: ${action}` }
     }
   } catch (error) {
     console.error('云函数执行错误:', error)
@@ -148,6 +178,9 @@ async function handleUpdateProfile(openid, data) {
   }
   if (data.avatar !== undefined) {
     updateData.avatar = data.avatar
+  }
+  if (data.phone !== undefined) {
+    updateData.phone = data.phone
   }
 
   // 如果没有要更新的字段

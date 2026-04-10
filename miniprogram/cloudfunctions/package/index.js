@@ -4,29 +4,40 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-// 管理员权限校验
-async function checkAdmin(openid) {
-  try {
-    const { data } = await db.collection('users').where({
-      _openid: openid
-    }).get()
-    
-    if (data.length === 0) {
-      return false
+// HTTP 触发器入口
+exports.main = async (event, context) => {
+  // HTTP 触发器处理
+  if (event.httpMethod) {
+    if (event.httpMethod === 'OPTIONS') {
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CloudBase-Authorization',
+        },
+        body: ''
+      }
     }
-    
-    const user = data[0]
-    return user.role === 'admin' || user.role === 'superAdmin'
-  } catch (err) {
-    console.error('校验管理员权限失败:', err)
-    return false
+    const body = JSON.parse(event.body || '{}')
+    const result = await handleRequest(body, context)
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(result)
+    }
   }
+  // 小程序直接调用
+  return await handleRequest(event, context)
 }
 
-exports.main = async (event, context) => {
+async function handleRequest(event, context) {
   const { action, data = {} } = event
   const wxContext = cloud.getWXContext()
-  const openid = wxContext.OPENID
+  const openid = wxContext.OPENID || event.openid || ''
   
   try {
     switch (action) {
@@ -49,11 +60,30 @@ exports.main = async (event, context) => {
         return await updatePackageStatus(data, openid)
       
       default:
-        return { code: -1, message: '未知操作' }
+        return { code: -1, message: `未知操作: ${action}` }
     }
   } catch (err) {
     console.error('云函数执行错误:', err)
     return { code: -1, message: err.message || '服务器内部错误' }
+  }
+}
+
+// 管理员权限校验
+async function checkAdmin(openid) {
+  try {
+    const { data } = await db.collection('users').where({
+      openid: openid
+    }).get()
+    
+    if (data.length === 0) {
+      return false
+    }
+    
+    const user = data[0]
+    return user.role === 'admin' || user.role === 'superAdmin'
+  } catch (err) {
+    console.error('校验管理员权限失败:', err)
+    return false
   }
 }
 
@@ -70,7 +100,7 @@ async function listPackages(data) {
   
   // 用户端只返回上架的套餐
   if (!isAdmin) {
-    whereCondition.status = 'on'
+    whereCondition.status = 'active'
   }
   
   const { data: list } = await db.collection('packages')
@@ -118,6 +148,7 @@ async function createPackage(data, openid) {
   
   const packageData = {
     ...data,
+    status: data.status || 'active',
     createTime: now,
     updateTime: now
   }
@@ -200,7 +231,7 @@ async function updatePackageStatus(data, openid) {
     return { code: -1, message: '套餐ID不能为空' }
   }
   
-  if (!['on', 'off'].includes(status)) {
+  if (!['active', 'inactive'].includes(status)) {
     return { code: -1, message: '状态值无效' }
   }
   

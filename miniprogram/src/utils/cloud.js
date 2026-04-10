@@ -160,21 +160,26 @@ const getMockData = (name, data) => {
 // 调用云函数
 export const callFunction = (name, data = {}) => {
   return new Promise((resolve, reject) => {
+    // 尝试调用真实云函数
     wx.cloud.callFunction({
       name,
       data,
       success: (res) => {
-        if (res.result && res.result.code === 0) {
-          resolve(res.result)
-        } else if (res.result) {
-          reject(res.result)
+        const result = res.result
+        if (result && result.code === 0) {
+          resolve(result)
+        } else if (result && result.code !== undefined) {
+          // 云函数返回了业务错误
+          console.warn(`云函数 ${name} 业务错误:`, result.message)
+          reject(new Error(result.message || '请求失败'))
         } else {
-          resolve(res)
+          // 兼容旧格式
+          resolve(result)
         }
       },
       fail: (err) => {
-        console.warn(`云函数 ${name} 调用失败，尝试使用Mock数据:`, err.errMsg || err)
-        // Mock 兜底 - 本地开发环境使用
+        console.warn(`云函数 ${name} 调用失败，使用Mock数据:`, err.errMsg || err)
+        // 降级到 Mock 数据
         const mockResult = getMockData(name, data)
         if (mockResult) {
           console.log(`[Mock] ${name}.${data?.action || 'default'} 返回模拟数据`)

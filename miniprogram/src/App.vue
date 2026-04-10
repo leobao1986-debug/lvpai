@@ -8,6 +8,7 @@ onLaunch(() => {
   } else {
     try {
       wx.cloud.init({
+        env: 'cloud1-3g56hllb4a005c0e',
         traceUser: true,
         timeout: 5000
       })

@@ -5,13 +5,61 @@ const db = cloud.database()
 const _ = db.command
 const $ = db.command.aggregate
 
+// HTTP 触发器入口
+exports.main = async (event, context) => {
+  // HTTP 触发器处理
+  if (event.httpMethod) {
+    if (event.httpMethod === 'OPTIONS') {
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CloudBase-Authorization',
+        },
+        body: ''
+      }
+    }
+    const body = JSON.parse(event.body || '{}')
+    const result = await handleRequest(body, context)
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(result)
+    }
+  }
+  // 小程序直接调用
+  return await handleRequest(event, context)
+}
+
+async function handleRequest(event, context) {
+  const { action, data = {} } = event
+  const wxContext = cloud.getWXContext()
+  const openid = wxContext.OPENID || event.openid || ''
+  
+  try {
+    switch (action) {
+      case 'overview':
+        return await getOverview(data, openid)
+      default:
+        return { code: -1, message: `未知操作: ${action}` }
+    }
+  } catch (err) {
+    console.error('云函数执行错误:', err)
+    return { code: -1, message: err.message || '服务器内部错误' }
+  }
+}
+
 /**
  * 检查是否为管理员
  */
 async function checkAdmin(openid) {
   try {
     const { data } = await db.collection('users')
-      .where({ _openid: openid })
+      .where({ openid: openid })
       .limit(1)
       .get()
     
@@ -49,30 +97,12 @@ function getMonthRange() {
   return { startDate, endDate }
 }
 
-exports.main = async (event, context) => {
-  const { action, data } = event
-  const wxContext = cloud.getWXContext()
-  const OPENID = wxContext.OPENID
-  
-  try {
-    switch (action) {
-      case 'overview':
-        return await getOverview(data, OPENID)
-      default:
-        return { code: -1, message: '未知操作' }
-    }
-  } catch (err) {
-    console.error('云函数执行错误:', err)
-    return { code: -1, message: err.message || '服务器内部错误' }
-  }
-}
-
 /**
  * 获取数据概览（管理员）
  */
-async function getOverview(data, OPENID) {
+async function getOverview(data, openid) {
   // 管理员权限校验
-  const isAdminRole = await checkAdmin(OPENID)
+  const isAdminRole = await checkAdmin(openid)
   if (!isAdminRole) {
     return { code: -1, message: '无权限查看统计数据' }
   }
@@ -129,12 +159,6 @@ async function getOverview(data, OPENID) {
     // 6. 总用户数
     const { total: totalUsers } = await db.collection('users').count()
     
-    // 获取各状态预约数量统计
-    const statusStats = await getBookingStatusStats()
-    
-    // 获取最近7天预约趋势
-    const weeklyTrend = await getWeeklyBookingTrend()
-    
     return {
       code: 0,
       message: 'success',
@@ -147,10 +171,6 @@ async function getOverview(data, OPENID) {
         totalBookings,
         totalUsers,
         
-        // 附加统计
-        statusStats,
-        weeklyTrend,
-        
         // 统计时间
         statsTime: new Date()
       }
@@ -159,70 +179,4 @@ async function getOverview(data, OPENID) {
     console.error('获取统计数据失败:', err)
     return { code: -1, message: '获取统计数据失败: ' + err.message }
   }
-}
-
-/**
- * 获取各状态预约数量统计
- */
-async function getBookingStatusStats() {
-  const stats = {
-    pending: 0,
-    confirmed: 0,
-    shooting: 0,
-    retouching: 0,
-    completed: 0,
-    cancelled: 0
-  }
-  
-  try {
-    // 由于云开发聚合能力有限，分别查询各状态数量
-    const statuses = ['pending', 'confirmed', 'shooting', 'retouching', 'completed', 'cancelled']
-    
-    for (const status of statuses) {
-      const { total } = await db.collection('bookings')
-        .where({ status })
-        .count()
-      stats[status] = total
-    }
-  } catch (err) {
-    console.error('获取状态统计失败:', err)
-  }
-  
-  return stats
-}
-
-/**
- * 获取最近7天预约趋势
- */
-async function getWeeklyBookingTrend() {
-  const trend = []
-  const today = new Date()
-  
-  try {
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today)
-      date.setDate(date.getDate() - i)
-      
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      const dateStr = `${year}-${month}-${day}`
-      
-      const { total } = await db.collection('bookings')
-        .where({
-          date: dateStr,
-          status: _.neq('cancelled')
-        })
-        .count()
-      
-      trend.push({
-        date: dateStr,
-        count: total
-      })
-    }
-  } catch (err) {
-    console.error('获取趋势数据失败:', err)
-  }
-  
-  return trend
 }

@@ -12,6 +12,64 @@ const TIME_SLOTS = [
 ]
 const MAX_BOOKINGS_PER_SLOT = 1 // 每个时段最多接1组拍摄
 
+// HTTP 触发器入口
+exports.main = async (event, context) => {
+  // HTTP 触发器处理
+  if (event.httpMethod) {
+    if (event.httpMethod === 'OPTIONS') {
+      return {
+        statusCode: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CloudBase-Authorization',
+        },
+        body: ''
+      }
+    }
+    const body = JSON.parse(event.body || '{}')
+    const result = await handleRequest(body, context)
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(result)
+    }
+  }
+  // 小程序直接调用
+  return await handleRequest(event, context)
+}
+
+async function handleRequest(event, context) {
+  const { action, data = {} } = event
+  const wxContext = cloud.getWXContext()
+  const openid = wxContext.OPENID || event.openid || ''
+  
+  try {
+    switch (action) {
+      case 'create':
+        return await createBooking(data, openid)
+      case 'list':
+        return await listBookings(data, openid)
+      case 'detail':
+        return await getBookingDetail(data, openid)
+      case 'cancel':
+        return await cancelBooking(data, openid)
+      case 'updateStatus':
+        return await updateBookingStatus(data, openid)
+      case 'availableSlots':
+        return await getAvailableSlots(data)
+      default:
+        return { code: -1, message: `未知操作: ${action}` }
+    }
+  } catch (err) {
+    console.error('云函数执行错误:', err)
+    return { code: -1, message: err.message || '服务器内部错误' }
+  }
+}
+
 /**
  * 生成订单编号
  * 格式: LP + 年月日时分秒 + 4位随机数
@@ -36,7 +94,7 @@ function generateOrderNo() {
 async function checkAdmin(openid) {
   try {
     const { data } = await db.collection('users')
-      .where({ _openid: openid })
+      .where({ openid: openid })
       .limit(1)
       .get()
     
@@ -68,38 +126,10 @@ async function checkSlotAvailability(date, timeSlot) {
   }
 }
 
-exports.main = async (event, context) => {
-  const { action, data } = event
-  const wxContext = cloud.getWXContext()
-  const OPENID = wxContext.OPENID
-  
-  try {
-    switch (action) {
-      case 'create':
-        return await createBooking(data, OPENID)
-      case 'list':
-        return await listBookings(data, OPENID)
-      case 'detail':
-        return await getBookingDetail(data, OPENID)
-      case 'cancel':
-        return await cancelBooking(data, OPENID)
-      case 'updateStatus':
-        return await updateBookingStatus(data, OPENID)
-      case 'availableSlots':
-        return await getAvailableSlots(data)
-      default:
-        return { code: -1, message: '未知操作' }
-    }
-  } catch (err) {
-    console.error('云函数执行错误:', err)
-    return { code: -1, message: err.message || '服务器内部错误' }
-  }
-}
-
 /**
  * 创建预约
  */
-async function createBooking(data, OPENID) {
+async function createBooking(data, openid) {
   const { packageId, date, timeSlot, contactName, contactPhone, persons, remark = '' } = data
   
   // 校验必填项
@@ -136,7 +166,7 @@ async function createBooking(data, OPENID) {
   
   // 创建预约记录
   const bookingData = {
-    userId: OPENID,
+    userId: openid,
     packageId: packageId,
     packageName: packageInfo.name,
     packagePrice: packageInfo.price,
@@ -177,7 +207,7 @@ async function createBooking(data, OPENID) {
     // 创建订单
     const orderData = {
       bookingId: bookingRes._id,
-      userId: OPENID,
+      userId: openid,
       packageId: packageId,
       packageName: packageInfo.name,
       totalPrice: packageInfo.price,
@@ -212,7 +242,7 @@ async function createBooking(data, OPENID) {
 /**
  * 查询预约列表
  */
-async function listBookings(data, OPENID) {
+async function listBookings(data, openid) {
   const { isAdmin, status, date, page = 1, pageSize = 10 } = data
   
   // 构建查询条件
@@ -220,10 +250,10 @@ async function listBookings(data, OPENID) {
   
   // 非管理员只能查看自己的预约
   if (!isAdmin) {
-    where.userId = OPENID
+    where.userId = openid
   } else {
     // 管理员权限校验
-    const isAdminRole = await checkAdmin(OPENID)
+    const isAdminRole = await checkAdmin(openid)
     if (!isAdminRole) {
       return { code: -1, message: '无权限查看全部预约' }
     }
@@ -265,7 +295,7 @@ async function listBookings(data, OPENID) {
 /**
  * 获取预约详情
  */
-async function getBookingDetail(data, OPENID) {
+async function getBookingDetail(data, openid) {
   const { id } = data
   
   if (!id) {
@@ -285,8 +315,8 @@ async function getBookingDetail(data, OPENID) {
   const booking = bookings[0]
   
   // 权限校验：非管理员只能查看自己的预约
-  const isAdminRole = await checkAdmin(OPENID)
-  if (!isAdminRole && booking.userId !== OPENID) {
+  const isAdminRole = await checkAdmin(openid)
+  if (!isAdminRole && booking.userId !== openid) {
     return { code: -1, message: '无权限查看此预约' }
   }
   
@@ -309,7 +339,7 @@ async function getBookingDetail(data, OPENID) {
 /**
  * 取消预约
  */
-async function cancelBooking(data, OPENID) {
+async function cancelBooking(data, openid) {
   const { id } = data
   
   if (!id) {
@@ -329,8 +359,8 @@ async function cancelBooking(data, OPENID) {
   const booking = bookings[0]
   
   // 权限校验
-  const isAdminRole = await checkAdmin(OPENID)
-  if (!isAdminRole && booking.userId !== OPENID) {
+  const isAdminRole = await checkAdmin(openid)
+  if (!isAdminRole && booking.userId !== openid) {
     return { code: -1, message: '无权限取消此预约' }
   }
   
@@ -391,11 +421,11 @@ async function cancelBooking(data, OPENID) {
 /**
  * 更新预约状态（管理员）
  */
-async function updateBookingStatus(data, OPENID) {
+async function updateBookingStatus(data, openid) {
   const { id, status } = data
   
   // 管理员权限校验
-  const isAdminRole = await checkAdmin(OPENID)
+  const isAdminRole = await checkAdmin(openid)
   if (!isAdminRole) {
     return { code: -1, message: '无权限执行此操作' }
   }
@@ -405,7 +435,7 @@ async function updateBookingStatus(data, OPENID) {
   }
   
   // 校验状态有效性
-  const validStatuses = ['pending', 'confirmed', 'shooting', 'retouching', 'completed', 'cancelled']
+  const validStatuses = ['pending', 'confirmed', 'shooting', 'retouching', 'completed']
   if (!validStatuses.includes(status)) {
     return { code: -1, message: '无效的预约状态' }
   }

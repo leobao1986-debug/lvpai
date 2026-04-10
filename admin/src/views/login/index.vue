@@ -96,7 +96,8 @@ const handleLogin = async () => {
         })
         
         ElMessage.success('登录成功')
-        router.push('/dashboard')
+        // 使用 replace 而不是 push，避免浏览器历史问题
+        router.replace('/dashboard')
         loading.value = false
       }, 500)
     } else {
